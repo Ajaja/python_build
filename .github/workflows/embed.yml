@@ -1,5 +1,4 @@
-name: Build CPython Windows x64 Embeddable (official pipeline)
-
+name: Build CPython Windows x64
 on:
   workflow_dispatch:
     inputs:
@@ -25,22 +24,30 @@ jobs:
       - name: Build using official release script
         shell: cmd
         run: |
-          REM Run official release pipeline (PGO + packaging)
           Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc
 
-      - name: Locate embeddable package
-        id: find_embed
+      - name: Collect ZIP artifacts
+        id: collect
         shell: powershell
         run: |
-          $file = Get-ChildItem -Recurse -Filter "*embed-amd64.zip" | Select-Object -First 1
-          if (-not $file) {
-            Write-Error "Embeddable package not found"
-          }
-          echo "path=$($file.FullName)" >> $env:GITHUB_OUTPUT
+          $out = "dist"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
 
-      - name: Upload artifact
+          $files = Get-ChildItem -Recurse -Include "*-embed-amd64.zip","*-amd64.zip"
+
+          if ($files.Count -eq 0) {
+            Write-Error "No ZIP artifacts found"
+          }
+
+          foreach ($f in $files) {
+            Copy-Item $f.FullName -Destination $out
+          }
+
+          echo "dir=$out" >> $env:GITHUB_OUTPUT
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: python-${{ github.event.inputs.tag }}-embed-amd64
-          path: ${{ steps.find_embed.outputs.path }}
+          name: python-${{ github.event.inputs.tag }}-windows-x64
+          path: ${{ steps.collect.outputs.dir }}
 
