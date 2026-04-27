@@ -1,4 +1,4 @@
-name: Build Python embed (Windows x64)
+name: Build Python (Windows x64, PGO, Embeddable Slim)
 
 on:
   workflow_dispatch:
@@ -22,31 +22,58 @@ jobs:
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Build Python (Release x64)
+      - name: Build Python (PGO, Release x64)
         run: |
-          PCbuild\build.bat -c Release -p x64
+          PCbuild\build.bat -c Release -p x64 --pgo
 
       - name: Prepare embeddable package
         shell: cmd
         run: |
           set OUT=python-embed
+          set BIN=PCbuild\amd64
+
           mkdir %OUT%
 
-          REM Copy core binaries
-          copy PCbuild\amd64\python.exe %OUT%\
-          copy PCbuild\amd64\python*.dll %OUT%\
-          copy PCbuild\amd64\*.pyd %OUT%\
+          REM Copy binaries
+          copy %BIN%\python.exe %OUT%\
+          copy %BIN%\python*.dll %OUT%\
+          copy %BIN%\*.pyd %OUT%\
 
-          REM Minimal stdlib (optional but useful)
+          REM Copy minimal stdlib
           xcopy /E /I Lib %OUT%\Lib
 
-          REM Remove unnecessary files
+          REM Strip heavy / unused modules
           rmdir /S /Q %OUT%\Lib\test
+          rmdir /S /Q %OUT%\Lib\tests
+          rmdir /S /Q %OUT%\Lib\idlelib
           rmdir /S /Q %OUT%\Lib\tkinter
+          rmdir /S /Q %OUT%\Lib\ensurepip
+          rmdir /S /Q %OUT%\Lib\venv
+          rmdir /S /Q %OUT%\Lib\distutils
+          rmdir /S /Q %OUT%\Lib\pydoc_data
+          rmdir /S /Q %OUT%\Lib\lib2to3
+          rmdir /S /Q %OUT%\Lib\unittest
 
-          REM Create pythonXY._pth for isolated mode
+          REM Remove __pycache__ if exists
+          for /d /r %OUT%\Lib %%d in (__pycache__) do @if exist "%%d" rd /s /q "%%d"
+
+          REM Compile to .pyc
+          %OUT%\python.exe -m compileall -b %OUT%\Lib
+
+          REM Remove .py sources (keep only .pyc)
+          for /r %OUT%\Lib %%f in (*.py) do del "%%f"
+
+          REM Pack stdlib into zip (like official embed)
+          powershell Compress-Archive -Path %OUT%\Lib\* -DestinationPath %OUT%\pythonstdlib.zip
+
+          REM Remove Lib folder after zipping
+          rmdir /S /Q %OUT%\Lib
+
+          REM Detect pythonXY name
           for %%f in (%OUT%\python*.dll) do set PYVER=%%~nf
-          echo Lib> %OUT%\%PYVER%._pth
+
+          REM Create _pth file (isolated mode)
+          echo pythonstdlib.zip> %OUT%\%PYVER%._pth
           echo .>> %OUT%\%PYVER%._pth
           echo import site>> %OUT%\%PYVER%._pth
 
@@ -57,6 +84,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-${{ github.event.inputs.tag }}-embed-x64
+          name: python-${{ github.event.inputs.tag }}-embed-x64-pgo-slim
           path: python-embed.zip
-
