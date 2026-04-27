@@ -1,0 +1,62 @@
+name: Build Python embed (Windows x64)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "CPython tag (e.g. v3.12.13)"
+        required: true
+        default: "v3.12.13"
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout CPython
+        uses: actions/checkout@v4
+        with:
+          repository: python/cpython
+          ref: ${{ github.event.inputs.tag }}
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build Python (Release x64)
+        run: |
+          PCbuild\build.bat -c Release -p x64
+
+      - name: Prepare embeddable package
+        shell: cmd
+        run: |
+          set OUT=python-embed
+          mkdir %OUT%
+
+          REM Copy core binaries
+          copy PCbuild\amd64\python.exe %OUT%\
+          copy PCbuild\amd64\python*.dll %OUT%\
+          copy PCbuild\amd64\*.pyd %OUT%\
+
+          REM Minimal stdlib (optional but useful)
+          xcopy /E /I Lib %OUT%\Lib
+
+          REM Remove unnecessary files
+          rmdir /S /Q %OUT%\Lib\test
+          rmdir /S /Q %OUT%\Lib\tkinter
+
+          REM Create pythonXY._pth for isolated mode
+          for %%f in (%OUT%\python*.dll) do set PYVER=%%~nf
+          echo Lib> %OUT%\%PYVER%._pth
+          echo .>> %OUT%\%PYVER%._pth
+          echo import site>> %OUT%\%PYVER%._pth
+
+      - name: Archive
+        run: |
+          powershell Compress-Archive -Path python-embed\* -DestinationPath python-embed.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-${{ github.event.inputs.tag }}-embed-x64
+          path: python-embed.zip
+
