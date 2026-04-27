@@ -1,16 +1,20 @@
-name: Build Safetensors cp314t Wheel
+name: Build Safetensors cp314t Windows Wheel
 
 on:
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch:
 
 jobs:
-  build_windows_wheels:
+  build_wheels:
     name: Build cp314t-win_amd64
     runs-on: windows-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout safetensors repository
         uses: actions/checkout@v4
+        with:
+          repository: safetensors/safetensors
+          # Optional: fetch-depth: 0 if you need tags for versioning
+          fetch-depth: 0
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -23,26 +27,28 @@ jobs:
           python-version: '3.14'
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.22.0 # Use the latest version for 2026
+        run: python -m pip install cibuildwheel
 
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
-        working-directory: .
+        # We run inside bindings/python because that's where pyproject.toml lives
+        working-directory: bindings/python
+        run: python -m cibuildwheel --output-dir ../../wheelhouse
         env:
-          # Target only the 3.14 free-threaded build for Windows 64-bit
+          # Target only the 3.14 free-threaded ABI for Windows 64-bit
           CIBW_BUILD: "cp314t-win_amd64"
           
-          # Explicitly enable free-threaded support in cibuildwheel
-          CIBW_FREE_THREADED_SUPPORT: 1
+          # Modern way to enable free-threaded support and pre-releases
+          CIBW_ENABLE: "free-threaded-support"
           
-          # safetensors' Python package is located in the 'bindings/python' subdirectory
-          CIBW_PACKAGE_DIR: "bindings/python"
+          # Ensure the Rust compiler is visible to the build backend (maturin)
+          CIBW_ENVIRONMENT: PATH="$PATH:$USERPROFILE\.cargo\bin"
           
-          # Ensure Rust is in the path during the build process
-          CIBW_ENVIRONMENT: PATH="$PATH;$HOME/.cargo/bin"
+          # Skip testing if you want a faster build, 
+          # otherwise cibuildwheel will try to install and test the wheel
+          CIBW_TEST_COMMAND: "python -c \"import safetensors; print('Success')\""
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: safetensors-wheels-cp314t-win64
-          path: ./wheelhouse/*.whl
+          name: safetensors-windows-cp314t
+          path: wheelhouse/*.whl
