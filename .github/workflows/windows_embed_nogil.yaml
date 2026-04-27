@@ -35,6 +35,8 @@ jobs:
             '<Target Name="BeforeBuild">
           <Copy SourceFiles="$(BuildPath)python$(MajorVersionNumber).$(MinorVersionNumber)t.exe"
                 DestinationFiles="$(BuildPath)python.exe" />
+          <Copy SourceFiles="$(BuildPath)pythonw$(MajorVersionNumber).$(MinorVersionNumber)t.exe"
+                DestinationFiles="$(BuildPath)pythonw.exe" />
           </Target>
           <Target Name="AfterBuild" />' |
           Set-Content $f
