@@ -21,6 +21,21 @@ jobs:
       - name: Setup MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Patch make_zip.proj for free-threaded
+        shell: powershell
+        run: |
+          $patch = @'
+          <Import Project="msi.props" />
+
+          <PropertyGroup>
+              <PythonExe>$(BuildPath)python$(MajorVersionNumber).$(MinorVersionNumber)t.exe</PythonExe>
+              <PythonVersion>$(PythonVersion)t</PythonVersion>
+          </PropertyGroup>
+          '@
+          $f = "Tools\msi\make_zip.proj"
+          (Get-Content $f -Raw) -replace '<Import Project="msi.props" />', $patch |
+          Set-Content $f
+    
       - name: Build using official release script
         shell: cmd
         env:
