@@ -20,6 +20,14 @@ jobs:
 
       - name: Setup MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
+      - name: Patch buildrelease.bat for free-threaded
+        shell: powershell
+        run: |
+          $f = "Tools\msi\buildrelease.bat"
+          (Get-Content $f -Raw) -replace `
+            '%MSBUILD% "%D%make_zip.proj" /t:Build %BUILDOPTS% %CERTOPTS% /p:OutputPath="%BUILD%en-us"', `
+            '%MSBUILD% "%D%make_zip.proj" /t:Build %BUILDOPTS% %CERTOPTS% /p:OutputPath="%BUILD%en-us" /p:DisableGil=true' |
+          Set-Content $f
     
       - name: Build using official release script
         shell: cmd
