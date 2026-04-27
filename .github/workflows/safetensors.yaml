@@ -1,0 +1,48 @@
+name: Build Safetensors cp314t Wheel
+
+on:
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build_windows_wheels:
+    name: Build cp314t-win_amd64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==2.22.0 # Use the latest version for 2026
+
+      - name: Build wheels
+        run: python -m cibuildwheel --output-dir wheelhouse
+        working-directory: .
+        env:
+          # Target only the 3.14 free-threaded build for Windows 64-bit
+          CIBW_BUILD: "cp314t-win_amd64"
+          
+          # Explicitly enable free-threaded support in cibuildwheel
+          CIBW_FREE_THREADED_SUPPORT: 1
+          
+          # safetensors' Python package is located in the 'bindings/python' subdirectory
+          CIBW_PACKAGE_DIR: "bindings/python"
+          
+          # Ensure Rust is in the path during the build process
+          CIBW_ENVIRONMENT: PATH="$PATH;$HOME/.cargo/bin"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: safetensors-wheels-cp314t-win64
+          path: ./wheelhouse/*.whl
