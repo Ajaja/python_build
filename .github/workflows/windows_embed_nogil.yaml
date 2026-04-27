@@ -37,8 +37,10 @@ jobs:
                 DestinationFiles="$(BuildPath)python.exe" />
           <Copy SourceFiles="$(BuildPath)pythonw$(MajorVersionNumber).$(MinorVersionNumber)t.exe"
                 DestinationFiles="$(BuildPath)pythonw.exe" />
-          <Copy SourceFiles="$(BuildPath)python$(MajorVersionNumber).$(MinorVersionNumber)t.dll"
-                DestinationFiles="$(BuildPath)python.dll" />
+          <Copy SourceFiles="$(BuildPath)python$(MajorVersionNumber)$(MinorVersionNumber)t.dll"
+                DestinationFiles="$(BuildPath)python$(MajorVersionNumber)$(MinorVersionNumber)t.dll" />
+          <Copy SourceFiles="$(BuildPath)python$(MajorVersionNumber)t.dll"
+                DestinationFiles="$(BuildPath)python$(MajorVersionNumber).dll" />
           </Target>
           <Target Name="AfterBuild" />' |
           Set-Content $f
