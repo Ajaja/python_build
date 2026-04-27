@@ -39,8 +39,7 @@ jobs:
       - name: Build using official release script
         shell: cmd
         env:
-          IncludeFreethreaded: "true"
-          UseDisableGil: "true"
+          DisableGil: "true"
         run: |
           Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc
 
@@ -61,6 +60,7 @@ jobs:
             Copy-Item $f.FullName -Destination $out
           }
 
+          echo "dir=$out"
           echo "dir=$out" >> $env:GITHUB_OUTPUT
 
       - name: Upload artifacts
