@@ -29,27 +29,8 @@ jobs:
         run: |
           Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc
 
-      - name: Collect ZIP artifacts
-        id: collect
-        shell: powershell
-        run: |
-          $out = "dist"
-          New-Item -ItemType Directory -Force -Path $out | Out-Null
-
-          $files = Get-ChildItem -Recurse -Include "*-embed-amd64.zip"
-
-          if ($files.Count -eq 0) {
-            Write-Error "No ZIP artifacts found"
-          }
-
-          foreach ($f in $files) {
-            Copy-Item $f.FullName -Destination $out
-          }
-
-          echo "dir=$out" >> $env:GITHUB_OUTPUT
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: python-${{ github.event.inputs.tag }}-windows-x64-nogil
-          path: ${{ steps.collect.outputs.dir }}
+          path: D:\a\python_build\python_build
