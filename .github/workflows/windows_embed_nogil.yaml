@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "CPython tag (e.g. v3.12.13)"
+        description: "CPython tag (e.g. v3.14.4)"
         required: true
-        default: "v3.12.13"
+        default: "v3.14.4"
 
 jobs:
   build:
