@@ -1,4 +1,4 @@
-name: Build Safetensors cp314t Windows Wheel
+name: Safetensors cp314t Windows Wheel
 
 on:
   workflow_dispatch:
