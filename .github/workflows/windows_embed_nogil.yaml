@@ -26,7 +26,7 @@ jobs:
           $f = "Tools\msi\buildrelease.bat"
           (Get-Content $f -Raw) -replace `
             '%MSBUILD% "%D%make_zip.proj" /t:Build %BUILDOPTS% %CERTOPTS% /p:OutputPath="%BUILD%en-us"', `
-            '%MSBUILD% "%D%make_zip.proj" /t:Build %BUILDOPTS% %CERTOPTS% /p:OutputPath="%BUILD%en-us" /p:DisableGil=true' |
+            '%MSBUILD% "%D%make_zip.proj" /t:Build %BUILDOPTS% %CERTOPTS% /p:OutputPath="%BUILD%en-us" /p:DisableGil="true"' |
           Set-Content $f
     
       - name: Build using official release script
@@ -63,4 +63,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-${{ github.event.inputs.tag }}-windows-x64
-          path: ${{ steps.collect.outputs.dir }}
+          path: D:\a\python_build\python_build
