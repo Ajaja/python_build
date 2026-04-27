@@ -1,4 +1,4 @@
-name: Build Python (Windows x64, PGO, Embeddable Slim)
+name: Build CPython Windows x64 Embeddable (official pipeline)
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-latest
 
     steps:
       - name: Checkout CPython
@@ -19,70 +19,28 @@ jobs:
           repository: python/cpython
           ref: ${{ github.event.inputs.tag }}
 
-      - name: Setup MSVC
+      - name: Setup MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Build Python (PGO, Release x64)
-        run: |
-          PCbuild\build.bat -c Release -p x64 --pgo
-
-      - name: Prepare embeddable package
+      - name: Build using official release script
         shell: cmd
         run: |
-          set OUT=python-embed
-          set BIN=PCbuild\amd64
+          REM Run official release pipeline (PGO + packaging)
+          Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc
 
-          mkdir %OUT%
-
-          REM Copy binaries
-          copy %BIN%\python.exe %OUT%\
-          copy %BIN%\python*.dll %OUT%\
-          copy %BIN%\*.pyd %OUT%\
-
-          REM Copy minimal stdlib
-          xcopy /E /I Lib %OUT%\Lib
-
-          REM Strip heavy / unused modules
-          rmdir /S /Q %OUT%\Lib\test
-          rmdir /S /Q %OUT%\Lib\tests
-          rmdir /S /Q %OUT%\Lib\idlelib
-          rmdir /S /Q %OUT%\Lib\tkinter
-          rmdir /S /Q %OUT%\Lib\ensurepip
-          rmdir /S /Q %OUT%\Lib\venv
-          rmdir /S /Q %OUT%\Lib\distutils
-          rmdir /S /Q %OUT%\Lib\pydoc_data
-          rmdir /S /Q %OUT%\Lib\lib2to3
-          rmdir /S /Q %OUT%\Lib\unittest
-
-          REM Remove __pycache__ if exists
-          for /d /r %OUT%\Lib %%d in (__pycache__) do @if exist "%%d" rd /s /q "%%d"
-
-          REM Compile to .pyc
-          %OUT%\python.exe -m compileall -b %OUT%\Lib
-
-          REM Remove .py sources (keep only .pyc)
-          for /r %OUT%\Lib %%f in (*.py) do del "%%f"
-
-          REM Pack stdlib into zip (like official embed)
-          powershell Compress-Archive -Path %OUT%\Lib\* -DestinationPath %OUT%\pythonstdlib.zip
-
-          REM Remove Lib folder after zipping
-          rmdir /S /Q %OUT%\Lib
-
-          REM Detect pythonXY name
-          for %%f in (%OUT%\python*.dll) do set PYVER=%%~nf
-
-          REM Create _pth file (isolated mode)
-          echo pythonstdlib.zip> %OUT%\%PYVER%._pth
-          echo .>> %OUT%\%PYVER%._pth
-          echo import site>> %OUT%\%PYVER%._pth
-
-      - name: Archive
+      - name: Locate embeddable package
+        id: find_embed
+        shell: powershell
         run: |
-          powershell Compress-Archive -Path python-embed\* -DestinationPath python-embed.zip
+          $file = Get-ChildItem -Recurse -Filter "*embed-amd64.zip" | Select-Object -First 1
+          if (-not $file) {
+            Write-Error "Embeddable package not found"
+          }
+          echo "path=$($file.FullName)" >> $env:GITHUB_OUTPUT
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-${{ github.event.inputs.tag }}-embed-x64-pgo-slim
-          path: python-embed.zip
+          name: python-${{ github.event.inputs.tag }}-embed-amd64
+          path: ${{ steps.find_embed.outputs.path }}
+
