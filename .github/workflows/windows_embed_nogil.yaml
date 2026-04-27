@@ -1,0 +1,54 @@
+name: Build CPython Windows x64 Embed NoGIL
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "CPython tag (e.g. v3.12.13)"
+        required: true
+        default: "v3.12.13"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout CPython
+        uses: actions/checkout@v4
+        with:
+          repository: python/cpython
+          ref: ${{ github.event.inputs.tag }}
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build using official release script
+        shell: cmd
+        env:
+          Py_GIL_DISABLED: "1"
+        run: |
+          Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc --disable-gil
+
+      - name: Collect ZIP artifacts
+        id: collect
+        shell: powershell
+        run: |
+          $out = "dist"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+          $files = Get-ChildItem -Recurse -Include "*-embed-amd64.zip"
+
+          if ($files.Count -eq 0) {
+            Write-Error "No ZIP artifacts found"
+          }
+
+          foreach ($f in $files) {
+            Copy-Item $f.FullName -Destination $out
+          }
+
+          echo "dir=$out" >> $env:GITHUB_OUTPUT
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-${{ github.event.inputs.tag }}-windows-x64-nogil
+          path: ${{ steps.collect.outputs.dir }}
