@@ -24,7 +24,7 @@ jobs:
       - name: Build using official release script
         shell: cmd
         env:
-          Py_GIL_DISABLED: "1"
+          IncludeFreethreaded: true
         run: |
           Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc --disable-gil
 
