@@ -25,8 +25,9 @@ jobs:
         shell: cmd
         env:
           IncludeFreethreaded: true
+          UseDisableGil: true
         run: |
-          Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc --disable-gil
+          Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc
 
       - name: Collect ZIP artifacts
         id: collect
