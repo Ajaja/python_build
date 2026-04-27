@@ -1,4 +1,4 @@
-name: Build CPython Windows x64 Embed
+name: CPython Windows x64 Embed
 on:
   workflow_dispatch:
     inputs:
