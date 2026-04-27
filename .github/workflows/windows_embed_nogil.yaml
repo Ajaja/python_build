@@ -1,4 +1,4 @@
-name: Build CPython Windows x64 Embed NoGIL
+name: CPython Windows x64 NoGIL
 on:
   workflow_dispatch:
     inputs:
@@ -20,36 +20,6 @@ jobs:
 
       - name: Setup MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
-      - name: Patch buildrelease.bat for free-threaded
-        shell: powershell
-        run: |
-          $f = "Tools\msi\buildrelease.bat"
-          (Get-Content $f -Raw) -replace `
-            '%MSBUILD% "%D%make_zip.proj" /t:Build %BUILDOPTS% %CERTOPTS% /p:OutputPath="%BUILD%en-us"', `
-            '%MSBUILD% "%D%make_zip.proj" /t:Build %BUILDOPTS% %CERTOPTS% /p:OutputPath="%BUILD%en-us" /p:DisableGil="true"' |
-          Set-Content $f
-          
-          $f = "Tools\msi\make_zip.proj"
-          (Get-Content $f -Raw) -replace `
-            '<Target Name="AfterBuild" />', `
-            '<Target Name="BeforeBuild">
-          <Copy SourceFiles="$(BuildPath)python$(MajorVersionNumber).$(MinorVersionNumber)t.exe"
-                DestinationFiles="$(BuildPath)python.exe" />
-          <Copy SourceFiles="$(BuildPath)pythonw$(MajorVersionNumber).$(MinorVersionNumber)t.exe"
-                DestinationFiles="$(BuildPath)pythonw.exe" />
-          <Copy SourceFiles="$(BuildPath)python$(MajorVersionNumber)$(MinorVersionNumber)t.dll"
-                DestinationFiles="$(BuildPath)python$(MajorVersionNumber)$(MinorVersionNumber)t.dll" />
-          <Copy SourceFiles="$(BuildPath)python$(MajorVersionNumber)t.dll"
-                DestinationFiles="$(BuildPath)python$(MajorVersionNumber).dll" />
-          </Target>
-          <Target Name="AfterBuild" />' |
-          Set-Content $f
-
-          $f = "Tools\msi\make_zip.proj"
-          (Get-Content $f -Raw) -replace `
-            'DependsOnTargets="_Build;AfterBuild"', `
-            'DependsOnTargets="BeforeBuild;_Build;AfterBuild"' |
-          Set-Content $f
     
       - name: Build using official release script
         shell: cmd
@@ -59,29 +29,12 @@ jobs:
           DisableGil: "true"
           do_pgo: "true"
         run: |
-          Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc
-
-      - name: Collect ZIP artifacts
-        id: collect
-        shell: powershell
-        run: |
-          $out = "dist"
-          New-Item -ItemType Directory -Force -Path $out | Out-Null
-
-          $files = Get-ChildItem -Recurse -Include "*-embed-amd64.zip"
-
-          if ($files.Count -eq 0) {
-            Write-Error "No ZIP artifacts found"
-          }
-
-          foreach ($f in $files) {
-            Copy-Item $f.FullName -Destination $out
-          }
-
-          echo "dir=$out" >> $env:GITHUB_OUTPUT
+          Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc --skip-zip
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: python-${{ github.event.inputs.tag }}-windows-x64
-          path: ${{ steps.collect.outputs.dir }}
+          name: python-${{ github.event.inputs.tag }}t-windows-x64
+          path: |
+            PCbuild\amd64\python*.dll
+            PCbuild\amd64\python*.exe
