@@ -29,9 +29,6 @@ jobs:
             '%MSBUILD% "%D%make_zip.proj" /t:Build %BUILDOPTS% %CERTOPTS% /p:OutputPath="%BUILD%en-us" /p:DisableGil="true"' |
           Set-Content $f
           
-      - name: Patch make_zip.proj for free-threaded
-        shell: powershell
-        run: |
           $f = "Tools\msi\make_zip.proj"
           (Get-Content $f -Raw) -replace `
             '<Target Name="AfterBuild" />', `
@@ -40,6 +37,12 @@ jobs:
                 DestinationFiles="$(BuildPath)python.exe" />
           </Target>
           <Target Name="AfterBuild" />' |
+          Set-Content $f
+
+          $f = "Tools\msi\make_zip.proj"
+          (Get-Content $f -Raw) -replace `
+            'DependsOnTargets="_Build;AfterBuild"', `
+            'DependsOnTargets="BeforeBuild;_Build;AfterBuild"' |
           Set-Content $f
     
       - name: Build using official release script
