@@ -13,7 +13,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: safetensors/safetensors
-          # Optional: fetch-depth: 0 if you need tags for versioning
           fetch-depth: 0
 
       - name: Set up Rust
@@ -30,22 +29,22 @@ jobs:
         run: python -m pip install cibuildwheel
 
       - name: Build wheels
-        # We run inside bindings/python because that's where pyproject.toml lives
+        # Run inside the directory containing pyproject.toml
         working-directory: bindings/python
         run: python -m cibuildwheel --output-dir ../../wheelhouse
         env:
-          # Target only the 3.14 free-threaded ABI for Windows 64-bit
+          # The specific build identifier for 3.14 free-threaded
           CIBW_BUILD: "cp314t-win_amd64"
           
-          # Modern way to enable free-threaded support and pre-releases
-          CIBW_ENABLE: "free-threaded-support"
+          # Fixed: Using the valid group name from your error message
+          CIBW_ENABLE: "cpython-freethreading"
           
-          # Ensure the Rust compiler is visible to the build backend (maturin)
-          CIBW_ENVIRONMENT: PATH="$PATH:$USERPROFILE\.cargo\bin"
+          # On Windows runners, the rust-toolchain action adds cargo to the PATH automatically.
+          # We'll leave this empty or remove it to avoid path syntax errors.
+          CIBW_ENVIRONMENT: ""
           
-          # Skip testing if you want a faster build, 
-          # otherwise cibuildwheel will try to install and test the wheel
-          CIBW_TEST_COMMAND: "python -c \"import safetensors; print('Success')\""
+          # Optional: Skip tests if they fail due to missing dependencies in the test env
+          CIBW_TEST_COMMAND: "python -c \"import safetensors; print('Successfully imported safetensors')\""
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
