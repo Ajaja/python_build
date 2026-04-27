@@ -28,6 +28,19 @@ jobs:
             '%MSBUILD% "%D%make_zip.proj" /t:Build %BUILDOPTS% %CERTOPTS% /p:OutputPath="%BUILD%en-us"', `
             '%MSBUILD% "%D%make_zip.proj" /t:Build %BUILDOPTS% %CERTOPTS% /p:OutputPath="%BUILD%en-us" /p:DisableGil="true"' |
           Set-Content $f
+          
+      - name: Patch make_zip.proj for free-threaded
+        shell: powershell
+        run: |
+          $f = "Tools\msi\make_zip.proj"
+          (Get-Content $f -Raw) -replace `
+            '<Target Name="AfterBuild" />', `
+            '<Target Name="BeforeBuild">
+          <Copy SourceFiles="$(BuildPath)python$(MajorVersionNumber).$(MinorVersionNumber)t.exe"
+                DestinationFiles="$(BuildPath)python.exe" />
+          </Target>
+          <Target Name="AfterBuild" />' |
+          Set-Content $f
     
       - name: Build using official release script
         shell: cmd
