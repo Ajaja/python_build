@@ -24,8 +24,8 @@ jobs:
       - name: Build using official release script
         shell: cmd
         env:
-          IncludeFreethreaded: true
-          UseDisableGil: true
+          IncludeFreethreaded: "true"
+          UseDisableGil: "true"
         run: |
           Tools\msi\buildrelease.bat -x64 --skip-msi --skip-nuget --skip-doc
 
