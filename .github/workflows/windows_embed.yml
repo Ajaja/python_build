@@ -1,4 +1,4 @@
-name: Build CPython Windows x64
+name: Build CPython Windows x64 Embed
 on:
   workflow_dispatch:
     inputs:
@@ -33,7 +33,7 @@ jobs:
           $out = "dist"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
 
-          $files = Get-ChildItem -Recurse -Include "*-embed-amd64.zip","*-amd64.zip"
+          $files = Get-ChildItem -Recurse -Include "*-embed-amd64.zip"
 
           if ($files.Count -eq 0) {
             Write-Error "No ZIP artifacts found"
